@@ -8,30 +8,37 @@ import { Link } from 'react-router-dom';
 export default function BlogList() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
   const ref = useScrollReveal();
 
   useEffect(() => {
     async function fetchPosts() {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.error('[BlogList] fetch error:', error);
+      try {
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) {
+          console.error('[BlogList] fetch error:', error);
+          setErr(error.message);
+          setLoading(false);
+          return;
+        }
+        const transformed = (data ?? []).map((p) => ({
+          slug: p.slug,
+          title: p.title,
+          date: p.date_published || new Date(p.created_at).toISOString().split('T')[0],
+          excerpt: p.excerpt || '',
+          tags: p.tags || [],
+          html: p.content_html || '',
+        }));
+        setPosts(transformed);
+      } catch (e) {
+        console.error('[BlogList] network error:', e);
+        setErr(e.message || 'Network error — check browser console');
+      } finally {
         setLoading(false);
-        return;
       }
-      // Transform Supabase rows into blog format
-      const transformed = (data ?? []).map((p) => ({
-        slug: p.slug,
-        title: p.title,
-        date: p.date_published || new Date(p.created_at).toISOString().split('T')[0],
-        excerpt: p.excerpt || '',
-        tags: p.tags || [],
-        html: p.content_html || '',
-      }));
-      setPosts(transformed);
-      setLoading(false);
     }
     fetchPosts();
   }, []);
@@ -44,6 +51,8 @@ export default function BlogList() {
 
         {loading ? (
           <p className="text-[#4a6274] font-mono text-sm animate-pulse">Loading posts…</p>
+        ) : err ? (
+          <p className="text-red-400 font-mono text-sm">Error: {err}</p>
         ) : posts.length === 0 ? (
           <p className="text-[#4a6274] font-mono text-sm">No posts yet. Check back soon.</p>
         ) : (

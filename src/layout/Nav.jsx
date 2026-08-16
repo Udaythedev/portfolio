@@ -1,19 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 
 const Nav = () => {
-  const sections = [
-    { id: 'about', label: 'ABOUT' },
-    { id: 'skills', label: 'SKILLS' },
-    { id: 'projects', label: 'PROJECTS' },
-    { id: 'achievements', label: 'ACHIEVE' },
-    { id: 'beyond', label: 'BEYOND' },
-    { id: 'contact', label: 'CONTACT' },
-  ];
-
-  const [activeId, setActiveId] = useState('hero');
+  const navigate = useNavigate();
   const [progress, setProgress] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Scroll progress
   useEffect(() => {
     const onScroll = () => {
       const h = document.documentElement;
@@ -26,26 +19,20 @@ const Nav = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) setActiveId(entry.target.id);
-        }
-      },
-      { rootMargin: '-80px 0px -60% 0px' }
-    );
-    for (const id of ['hero', ...sections.map((s) => s.id)]) {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
-  }, []);
+  // Desktop nav links
+  const sectionLinks = [
+    { id: 'about', label: 'ABOUT' },
+    { id: 'skills', label: 'SKILLS' },
+    { id: 'projects', label: 'PROJECTS' },
+    { id: 'achievements', label: 'ACHIEVE' },
+    { id: 'beyond', label: 'BEYOND' },
+    { id: 'contact', label: 'CONTACT' },
+  ];
 
-  const handleNavClick = (id) => {
+  const navigateToSection = (id) => {
+    navigate('/');
+    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }), 50);
     setMobileOpen(false);
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -63,34 +50,44 @@ const Nav = () => {
       >
         <div className="max-w-4xl mx-auto px-6 h-12 flex items-center justify-between">
           {/* Logo */}
-          <button
-            onClick={() => handleNavClick('hero')}
+          <NavLink
+            to="/"
             className="font-display font-bold text-sm hover:text-[#c45b3e] transition-colors focus:none"
-            style={{ color: '#e4dfd3', letterSpacing: '0.1em' }}
+            style={{ color: '#e4dfd3', letterSpacing: '0.1em', textDecoration: 'none' }}
           >
             UDAY MAHATO
-          </button>
+          </NavLink>
 
           {/* Desktop links */}
           <div className="hidden sm:flex items-center gap-5">
-            {sections.map((sec) => {
-              const isActive = activeId === sec.id;
-              return (
-                <button
-                  key={sec.id}
-                  onClick={() => handleNavClick(sec.id)}
-                  className="font-mono text-xs uppercase tracking-widest transition-colors focus:none"
-                  style={{
-                    color: isActive ? '#c45b3e' : '#6b7a8d',
-                    textDecoration: 'none',
-                    borderBottom: isActive ? '1px solid #c45b3e' : '1px solid transparent',
-                    paddingBottom: 2,
-                  }}
-                >
-                  {sec.label}
-                </button>
-              );
-            })}
+            {sectionLinks.map((sec) => (
+              <button
+                key={sec.id}
+                onClick={() => navigateToSection(sec.id)}
+                className="font-mono text-xs uppercase tracking-widest transition-colors focus:none"
+                style={{
+                  color: '#6b7a8d',
+                  textDecoration: 'none',
+                  borderBottom: '1px solid transparent',
+                  paddingBottom: 2,
+                }}
+              >
+                {sec.label}
+              </button>
+            ))}
+            <NavLink
+              to="/blog"
+              className={({ isActive }) =>
+                `font-mono text-xs uppercase tracking-widest transition-colors focus:none ${isActive ? 'text-[#c45b3e]' : 'text-[#6b7a8d]'}`
+              }
+              style={{
+                textDecoration: 'none',
+                borderBottom: '1px solid transparent',
+                paddingBottom: 2,
+              }}
+            >
+              WRITES
+            </NavLink>
           </div>
 
           {/* Mobile hamburger */}
@@ -121,23 +118,26 @@ const Nav = () => {
             }}
           >
             <div className="px-6 py-4 flex flex-col gap-2">
-              {sections.map((sec) => {
-                const isActive = activeId === sec.id;
-                return (
-                  <button
-                    key={sec.id}
-                    onClick={() => handleNavClick(sec.id)}
-                    className="font-mono text-xs uppercase tracking-widest text-left py-1 focus:none"
-                    style={{
-                      color: isActive ? '#c45b3e' : '#6b7a8d',
-                      borderBottom: `1px solid ${isActive ? '#c45b3e' : 'rgba(74,98,116,0.15)'}`,
-                      paddingBottom: 3,
-                    }}
-                  >
-                    {sec.label}
-                  </button>
-                );
-              })}
+              {sectionLinks.map((sec) => (
+                <button
+                  key={sec.id}
+                  onClick={() => navigateToSection(sec.id)}
+                  className="font-mono text-xs uppercase tracking-widest text-left py-1 focus:none"
+                  style={{ color: '#6b7a8d', borderBottom: '1px solid rgba(74,98,116,0.15)', paddingBottom: 3 }}
+                >
+                  {sec.label}
+                </button>
+              ))}
+              <NavLink
+                to="/blog"
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  `font-mono text-xs uppercase tracking-widest text-left py-1 focus:none ${isActive ? 'text-[#c45b3e]' : 'text-[#6b7a8d]'}`
+                }
+                style={{ borderBottom: '1px solid rgba(74,98,116,0.15)', paddingBottom: 3, textDecoration: 'none' }}
+              >
+                WRITES
+              </NavLink>
             </div>
           </div>
         )}

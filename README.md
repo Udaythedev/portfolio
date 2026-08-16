@@ -58,6 +58,60 @@ Light interactive touches that give the site subtle game-dev energy without bein
 | FIG. 04 | Achievements | Vertical timeline with medal emojis |
 | FIG. 05 | Beyond the Code | Content pipeline, Gumroad preset, 3D modeling |
 | FIG. 06 | Contact | Email, handles, closing note |
+| FIG. 07 | Blog (Writes) | Markdown-powered blog, powered by Supabase |
+
+---
+
+## Blog Setup (Supabase)
+
+The blog uses [Supabase](https://supabase.com) as a free database backend. Here's how to set it up:
+
+### 1. Create a Supabase project
+Go to https://supabase.com → Sign up (free) → Create a new project.
+
+### 2. Run the SQL to create the `posts` table
+Copy and paste this into the Supabase **SQL Editor**:
+
+```sql
+create table posts (
+  id bigint primary key generated always as identity,
+  slug text unique not null,
+  title text not null,
+  date_published text,
+  excerpt text,
+  tags text[],
+  content_markdown text not null,
+  content_html text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table posts enable row level security;
+
+create policy "Public posts are viewable by everyone"
+  on posts for select using (true);
+
+create policy "Admin can insert posts"
+  on posts for insert with check (true);
+
+create policy "Admin can update posts"
+  on posts for update using (true);
+
+create policy "Admin can delete posts"
+  on posts for delete using (true);
+```
+
+### 3. Set environment variables
+Create a `.env` file in the project root:
+```bash
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+VITE_ADMIN_PASSWORD=your-secure-password
+```
+> ⚠️ Commit only `.env.example`, never the actual `.env`.
+
+### 4. Write your first blog post
+Visit `https://your-domain.com/admin` → enter password → write and publish!
 
 ---
 

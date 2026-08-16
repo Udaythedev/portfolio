@@ -1,0 +1,414 @@
+@import "tailwindcss";
+
+@theme default {
+  --font-display: "Big Shoulders Display", sans-serif;
+  --font-body: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* Background — true deep ink */
+  --color-ink: #0a0c10;
+
+  /* Paper — warm blueprint-paper tone */
+  --color-paper: #e4dfd3;
+
+  /* Structural — cool drafting-line blue */
+  --color-struct: #4a6274;
+
+  /* Accent — terracotta / rust (single unified accent) */
+  --color-accent: #c45b3e;
+
+  /* Muted body text on dark */
+  --color-muted: #9ba4b5;
+
+  /* Dark text on paper panels */
+  --color-ink-dark: #1a1c23;
+}
+
+/* ─── Base ─────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* Push sections below the fixed nav when scrolling into view */
+section[id] {
+  scroll-margin-top: 52px;
+}
+
+body {
+  min-height: 100vh;
+  background-color: #0a0c10;
+  color: #9ba4b5;
+  font-family: "IBM Plex Sans", sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Blueprint grid — very faint, almost invisible */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(to bottom, rgba(74, 98, 116, 0.04) 1px, transparent 1px),
+    linear-gradient(to right, rgba(74, 98, 116, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Corner registration ticks — subtle */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(90deg, rgba(74, 98, 116, 0.12) 0, rgba(74, 98, 116, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 98, 116, 0.12) 0, rgba(74, 98, 116, 0.12) 1px, transparent 1px),
+    linear-gradient(rgba(74, 98, 116, 0.12) 0, rgba(74, 98, 116, 0.12) 1px, transparent 1px),
+    linear-gradient(rgba(74, 98, 116, 0.12) 0, rgba(74, 98, 116, 0.12) 1px, transparent 1px);
+  background-repeat: no-repeat;
+  background-size: 2px 20px, 2px 20px, 20px 2px, 20px 2px;
+  background-position: left top, right top, left bottom, right bottom;
+}
+
+#root { position: relative; z-index: 1; }
+
+/* Focus visible — accent color outline */
+*:focus-visible {
+  outline: 2px solid #c45b3e;
+  outline-offset: 2px;
+}
+
+/* ─── Typography helpers ───────────────────────────────────── */
+.fig-label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.65rem;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #4a6274;
+}
+
+/* ─── Spec-card — Paper panel, minimal corners ─────────────── */
+.spec-card {
+  background-color: #e4dfd3;
+  border: 1px solid rgba(74, 98, 116, 0.4);
+  padding: 1.25rem;
+  position: relative;
+}
+/* Single corner bracket — bottom right only */
+.spec-card::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 12px;
+  height: 12px;
+  border-bottom: 1px solid rgba(74, 98, 116, 0.5);
+  border-right: 1px solid rgba(74, 98, 116, 0.5);
+  pointer-events: none;
+}
+
+/* ─── CRT scanline overlay (subtle, runs across full viewport) ─ */
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.035) 2px,
+    rgba(0, 0, 0, 0.035) 4px
+  );
+  mix-blend-mode: multiply;
+}
+
+/* ─── Pixel-art corner brackets (blocky, game-dev feel) ─────── */
+.pixel-corners {
+  position: relative;
+}
+.pixel-corners::before,
+.pixel-corners::after {
+  content: '';
+  position: absolute;
+  width: 8px; height: 8px;
+  border-color: rgba(74, 98, 116, 0.5);
+  border-style: solid;
+  border-width: 0;
+  transition: border-color 0.15s ease;
+}
+/* top-left */
+.pixel-corners::before {
+  top: -1px; left: -1px;
+  border-top-width: 1px; border-left-width: 1px;
+}
+/* bottom-right */
+.pixel-corners::after {
+  bottom: -1px; right: -1px;
+  border-bottom-width: 1px; border-right-width: 1px;
+}
+/* top-right extra pixel */
+.pixel-corners .pixel-br-tr {
+  position: absolute; top: -1px; right: -1px;
+  width: 8px; height: 1px; background: rgba(74, 98, 116, 0.5);
+  transition: background 0.15s ease;
+}
+.pixel-corners .pixel-br-tr::after {
+  content: ''; position: absolute; right: -1px; top: 0;
+  width: 1px; height: 8px; background: rgba(74, 98, 116, 0.5);
+  transition: background 0.15s ease;
+}
+/* bottom-left extra pixel */
+.pixel-corners .pixel-br-bl {
+  position: absolute; bottom: -1px; left: -1px;
+  width: 1px; height: 8px; background: rgba(74, 98, 116, 0.5);
+  transition: background 0.15s ease;
+}
+.pixel-corners .pixel-br-bl::after {
+  content: ''; position: absolute; left: 0; bottom: -1px;
+  width: 8px; height: 1px; background: rgba(74, 98, 116, 0.5);
+  transition: background 0.15s ease;
+}
+.pixel-corners:hover::before,
+.pixel-corners:hover::after,
+.pixel-corners:hover .pixel-br-tr,
+.pixel-corners:hover .pixel-br-tr::after,
+.pixel-corners:hover .pixel-br-bl,
+.pixel-corners:hover .pixel-br-bl::after {
+  border-color: #c45b3e;
+  background: #c45b3e;
+}
+
+/* ─── Dimension-line divider (saloon.wtf style) ────────────── */
+.dim-divider {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 2.5rem 0;
+}
+.dim-line { flex: 1; height: 1px; background: rgba(74, 98, 116, 0.3); }
+.dim-tick { width: 1px; height: 6px; background: rgba(74, 98, 116, 0.3); flex-shrink: 0; }
+.dim-gap  { width: 1rem; flex-shrink: 0; }
+
+/* ===== text divider variant (like saloon.wtf) ────────────── */
+.text-divider {
+  text-align: center;
+  color: #4a6274;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  opacity: 0.45;
+  margin: 2.5rem 0;
+  user-select: none;
+}
+
+/* ─── Scroll progress bar (thin, clean) ────────────────────── */
+.scroll-progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 1px;
+  width: 0%;
+  background: #c45b3e;
+  z-index: 50;
+  transition: width 0.06s linear;
+}
+
+/* ─── Achievement timeline ─────────────────────────────────── */
+.ach-timeline {
+  position: relative;
+  padding-left: 1.25rem;
+}
+.ach-timeline::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(74, 98, 116, 0.3);
+}
+.ach-timeline li {
+  position: relative;
+  padding-bottom: 0.875rem;
+}
+.ach-timeline li::before {
+  content: "";
+  position: absolute;
+  left: -1.25rem;
+  top: 0.5rem;
+  width: 4px;
+  height: 4px;
+  background: #c45b3e;
+  transform: rotate(45deg) translateX(-50%);
+  margin-left: 2px;
+}
+
+/* ─── Skill tag with proficiency fill ──────────────────────── */
+.skill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid rgba(74, 98, 116, 0.3);
+  color: #1a1c23;
+  background: transparent;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.2s, border-color 0.2s;
+}
+.skill-tag:hover {
+  color: #c45b3e;
+  border-color: #c45b3e;
+}
+.skill-tag .fill-bar {
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 1px;
+  background: #4a6274;
+  opacity: 0.5;
+}
+
+/* ─── Link underline style (saloon.wtf inspired) ──────────── */
+.mini-link {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4a6274;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(74, 98, 116, 0.3);
+  transition: color 0.2s, border-color 0.2s;
+}
+.mini-link:hover {
+  color: #c45b3e;
+  border-color: #c45b3e;
+}
+
+/* ─── RPG skill bar (game-dev stat meter) ──────────────────── */
+.skill-rpg-bar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid rgba(74, 98, 116, 0.3);
+  color: #1a1c23;
+  background: transparent;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.2s, border-color 0.2s;
+}
+.skill-rpg-bar::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 2px;
+  width: var(--fill, 60%);
+  background: #c45b3e;
+  transition: width 0.6s ease-out;
+}
+.skill-rpg-bar:hover {
+  color: #c45b3e;
+  border-color: #c45b3e;
+}
+
+/* ─── Project card hover flash (game UI) ───────────────────── */
+.project-card {
+  position: relative;
+  border: 1px solid rgba(74, 98, 116, 0.3);
+  background: #e4dfd3;
+  transition: border-color 0.15s ease;
+}
+.project-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(196, 91, 62, 0.04), transparent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.project-card:hover {
+  border-color: rgba(196, 91, 62, 0.6);
+}
+.project-card:hover::before {
+  opacity: 1;
+}
+.project-card::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 10px; height: 10px;
+  border-bottom: 1px solid rgba(74, 98, 116, 0.4);
+  border-right: 1px solid rgba(74, 98, 116, 0.4);
+  pointer-events: none;
+}
+.project-card:hover::after {
+  border-color: #c45b3e;
+}
+
+/* ─── Achievement toast ────────────────────────────────────── */
+.ach-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(10, 12, 16, 0.95);
+  border: 1px solid #c45b3e;
+  padding: 0.6rem 1.2rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  color: #e4dfd3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ach-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.ach-toast .toast-medal {
+  font-size: 1rem;
+}
+
+/* ─── Developer mode toast ─────────────────────────────────── */
+.dev-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 12, 16, 0.97);
+  border: 2px solid #c45b3e;
+  padding: 1.5rem 2.5rem;
+  font-family: "Big Shoulders Display", sans-serif;
+  font-size: 1.5rem;
+  color: #c45b3e;
+  letter-spacing: 0.05em;
+  z-index: 70;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  text-align: center;
+}
+.dev-toast.show {
+  opacity: 1;
+}

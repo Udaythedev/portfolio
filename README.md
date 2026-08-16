@@ -2,7 +2,7 @@
 
 A single-page personal portfolio built with React + Vite + Tailwind CSS v4 and Framer Motion.
 
-**Live site:** https://udaythedev.github.io/portfolio
+**Live site:** https://udays.space
 
 ---
 

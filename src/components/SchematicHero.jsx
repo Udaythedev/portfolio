@@ -113,7 +113,7 @@ const SchematicHero = () => {
             {/* Name — clean, large */}
             <text x={svgW / 2} y={nameY + 16} textAnchor="middle" dominantBaseline="middle"
               style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontSize: '56px', fontWeight: 700, letterSpacing: '-0.01em', fill: '#e4dfd3' }}>
-              UDAY MAHATO
+              UDAY KUMAR MAHATO
             </text>
 
             {/* Dimension line under name */}

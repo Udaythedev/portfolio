@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { SchematicLabel } from '../../lib/SchematicLabel';
-import { useScrollReveal } from '../../lib/useScrollReveal';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
@@ -9,7 +8,6 @@ export default function BlogList() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
-  const ref = useScrollReveal();
 
   useEffect(() => {
     async function fetchPosts() {
@@ -56,7 +54,7 @@ export default function BlogList() {
         ) : posts.length === 0 ? (
           <p className="text-[#4a6274] font-mono text-sm">No posts yet. Check back soon.</p>
         ) : (
-          <motion.ul ref={ref} className="space-y-6">
+          <motion.ul className="space-y-6">
             {posts.map((post, i) => (
               <PostCard key={post.slug} post={post} delay={i * 0.06} />
             ))}
@@ -91,9 +89,11 @@ function PostCard({ post, delay }) {
         {post.excerpt && (
           <p className="text-xs text-[#6b6b6b] mt-1 leading-relaxed">{post.excerpt}</p>
         )}
+        <div className="pixel-br-tr" />
+        <div className="pixel-br-bl" />
+        <div className="pixel-br-tr" />
+        <div className="pixel-br-bl" />
       </Link>
-      <div className="pixel-br-tr" />
-      <div className="pixel-br-bl" />
     </motion.li>
   );
 }

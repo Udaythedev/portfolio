@@ -1,143 +1,463 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { SchematicLabel } from '../../lib/SchematicLabel';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || '';
+// Marked config
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+  smartypants: true,
+});
 
 export default function Admin() {
+  const [session, setSession] = useState(null);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [unlocked, setUnlocked] = useState(false);
-  const [editorMode, setEditorMode] = useState('new'); // 'new' | 'edit'
-  const [editingId, setEditingId] = useState(null);
-
-  // Form state
+  const [editorMode, setEditorMode] = useState('new'); // 'new' or 'edit'
+  const [selectedPost, setSelectedPost] = useState(null);
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
   const [excerpt, setExcerpt] = useState('');
-  const [tagsInput, setTagsInput] = useState('');
+  const [tags, setTags] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [contentMarkdown, setContentMarkdown] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
   const [existingPosts, setExistingPosts] = useState([]);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitErr, setSubmitErr] = useState(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Fetch posts for editing
   useEffect(() => {
-    if (!unlocked) return;
-    supabase.from('posts').select('id, slug, title, created_at').order('created_at', { ascending: false }).then(({ data }) => {
-      setExistingPosts(data || []);
+    supabase?.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
     });
-  }, [unlocked, editorMode]);
+    const { data: { subscription } } = supabase?.auth.onAuthStateChange((_event, currentSession) => {
+      setSession(currentSession);
+    });
+    return () => subscription?.unsubscribe();
+  }, []);
 
-  // Load post when switching to edit mode
   useEffect(() => {
-    if (editorMode === 'edit' && editingId) {
-      const post = existingPosts.find((p) => p.id === editingId);
-      if (post) {
-        supabase.from('posts').select('*').eq('id', editingId).single().then(({ data }) => {
-          if (data) {
-            setTitle(data.title);
-            setDate(data.date_published || new Date(data.created_at).toISOString().split('T')[0]);
-            setExcerpt(data.excerpt || '');
-            setTagsInput((data.tags || []).join(', '));
-            setContentMarkdown(data.content_markdown || '');
-          }
-        });
-      }
+    if (session) {
+      fetchPosts();
     }
-  }, [editorMode, editingId]);
+  }, [session]);
 
-  const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) {
-      setUnlocked(true);
-      setMessage({ type: 'success', text: 'Access granted.' });
-    } else {
-      setMessage({ type: 'error', text: 'Incorrect password.' });
+  const fetchPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        setMessage({ type: 'error', text: `Failed to load posts: ${error.message}` });
+      } else {
+        setExistingPosts(data || []);
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: `Network error: ${e.message}` });
     }
+  };
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setMessage({ type: 'error', text: 'Email and password required' });
+      return;
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setMessage({ type: 'error', text: error.message });
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
   };
 
   const handleNew = () => {
     setEditorMode('new');
-    setTitle(''); setDate(''); setExcerpt('');
-    setTagsInput(''); setContentMarkdown('');
+    setSelectedPost(null);
+    setTitle('');
+    setExcerpt('');
+    setTags('');
+    setDate(new Date().toISOString().split('T')[0]);
+    setContentMarkdown('');
     setMessage({ type: '', text: '' });
   };
 
-  const handleEdit = (id) => {
+  const handleEdit = (postId) => {
+    const post = existingPosts.find((p) => p.id === postId);
+    if (!post) return;
+    setSelectedPost(post);
     setEditorMode('edit');
-    setEditingId(id);
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this post?')) return;
-    const { error } = await supabase.from('posts').delete().eq('id', id);
-    if (error) setMessage({ type: 'error', text: error.message });
-    else {
-      setExistingPosts((prev) => prev.filter((p) => p.id !== id));
-      setMessage({ type: 'success', text: 'Post deleted.' });
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!title.trim() || !contentMarkdown.trim()) {
-      setMessage({ type: 'error', text: 'Title and content are required.' });
-      return;
-    }
-    setSaving(true);
+    setTitle(post.title);
+    setExcerpt(post.excerpt || '');
+    setTags(post.tags?.join(', ') || '');
+    setDate(post.date_published || new Date(post.created_at).toISOString().split('T')[0]);
+    setContentMarkdown(post.content_markdown || '');
     setMessage({ type: '', text: '' });
-
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
-    const datePublished = date || new Date().toISOString().split('T')[0];
-
-    // Basic markdown → HTML (headings, bold, italic, code blocks, links)
-    let html = contentMarkdown
-      .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-      .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-      .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\n/g, '<br/>')
-      .replace(/<br\/><br\/>/g, '</p><p>');
-    html = `<p>${html}</p>`;
-
-    const post = { title, slug, date_published: datePublished, excerpt, tags, content_markdown: contentMarkdown, content_html: html };
-
-    if (editorMode === 'new') {
-      const { error } = await supabase.from('posts').insert([post]);
-      if (error) setMessage({ type: 'error', text: error.message });
-      else {
-        setMessage({ type: 'success', text: 'Post published!' });
-        setTitle(''); setDate(''); setExcerpt(''); setTagsInput(''); setContentMarkdown('');
-      }
-    } else {
-      const { error } = await supabase.from('posts').update(post).eq('id', editingId);
-      if (error) setMessage({ type: 'error', text: error.message });
-      else {
-        setMessage({ type: 'success', text: 'Post updated!' });
-      }
-    }
-    setSaving(false);
   };
+
+  const handleDelete = async (postId) => {
+    if (!confirm('Delete this post?')) return;
+    try {
+      const { error } = await supabase.from('posts').delete().eq('id', postId);
+      if (error) {
+        setMessage({ type: 'error', text: `Delete failed: ${error.message}` });
+      } else {
+        setMessage({ type: 'success', text: 'Post deleted!' });
+        fetchPosts();
+        if (selectedPost?.id === postId) {
+          handleNew();
+        }
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: `Network error: ${e.message}` });
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitErr(null);
+    setSubmitSuccess(false);
+    try {
+      let slug = title
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      if (!slug) slug = 'untitled';
+
+      // Check for slug collision and append -2, -3, ... if needed
+      let finalSlug = slug;
+      let counter = 1;
+      while (true) {
+        const { data: existing, error: checkErr } = await supabase
+          .from('posts')
+          .select('id')
+          .eq('slug', finalSlug)
+          .limit(1);
+        if (checkErr) {
+          setSubmitErr(`Slug check failed: ${checkErr.message}`);
+          setIsSubmitting(false);
+          return;
+        }
+        if (!existing?.length) break;
+        counter++;
+        finalSlug = `${slug}-${counter}`;
+      }
+
+      const { error } = await supabase.from('posts').insert({
+        title,
+        slug: finalSlug,
+        excerpt,
+        tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+        content_html: DOMPurify.sanitize(marked.parse(contentMarkdown)),
+        date_published: date,
+        content_markdown: contentMarkdown,
+      });
+
+      if (error) {
+        setSubmitErr(error.message);
+      } else {
+        setSubmitSuccess(true);
+        setTitle('');
+        setExcerpt('');
+        setTags('');
+        setDate(new Date().toISOString().split('T')[0]);
+        setContentMarkdown('');
+        fetchPosts();
+      }
+    } catch (e) {
+      setSubmitErr(e.message || 'Network error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  function EditPostForm({ post, onPostUpdated }) {
+    const [title, setTitle] = useState(post.title);
+    const [excerpt, setExcerpt] = useState(post.excerpt || '');
+    const [tags, setTags] = useState(post.tags?.join(', ') || '');
+    const [contentMarkdown, setContentMarkdown] = useState(post.content_markdown || '');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitErr, setSubmitErr] = useState(null);
+    const [submitSuccess, setSubmitSuccess] = useState(false);
+
+    useEffect(() => {
+      // Keep slug immutable on edit — no regeneration
+      setTitle(post.title);
+      setExcerpt(post.excerpt || '');
+      setTags(post.tags?.join(', ') || '');
+      setContentMarkdown(post.content_markdown || '');
+    }, [post.id, post.title, post.excerpt, post.tags, post.content_markdown]);
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setIsSubmitting(true);
+      setSubmitErr(null);
+      setSubmitSuccess(false);
+      try {
+        const { error } = await supabase
+          .from('posts')
+          .update({
+            title,
+            excerpt,
+            tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+            content_html: DOMPurify.sanitize(marked.parse(contentMarkdown)),
+            content_markdown: contentMarkdown,
+          })
+          .eq('id', post.id);
+
+        if (error) {
+          setSubmitErr(error.message);
+        } else {
+          setSubmitSuccess(true);
+          onPostUpdated();
+        }
+      } catch (e) {
+        setSubmitErr(e.message || 'Network error');
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    return (
+      <div className="border border-[rgba(74,98,116,0.3)] bg-[#e4dfd3]/90 p-6 pixel-corners space-y-4">
+        <div>
+          <label className="fig-label block mb-1">Title</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-display text-base uppercase tracking-tight pb-1 focus:outline-none focus:border-[#c45b3e]"
+            placeholder="Post title…"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="fig-label block mb-1">Date Published</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-sm pb-1 focus:outline-none focus:border-[#c45b3e]"
+            />
+          </div>
+          <div>
+            <label className="fig-label block mb-1">Tags (comma-separated)</label>
+            <input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-sm pb-1 focus:outline-none focus:border-[#c45b3e]"
+              placeholder="game-dev, unity"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="fig-label block mb-1">Excerpt</label>
+          <input
+            value={excerpt}
+            onChange={(e) => setExcerpt(e.target.value)}
+            className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-sm pb-1 focus:outline-none focus:border-[#c45b3e]"
+            placeholder="One-line preview…"
+          />
+        </div>
+        <div>
+          <label className="fig-label block mb-1">Content (Markdown)</label>
+          <textarea
+            value={contentMarkdown}
+            onChange={(e) => setContentMarkdown(e.target.value)}
+            rows={16}
+            className="w-full bg-transparent border border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-xs p-3 focus:outline-none focus:border-[#c45b3e] resize-y"
+            placeholder="# Heading&#10;&#10;Paragraph with **bold** and `code`."
+          />
+        </div>
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="py-2 px-6 font-mono text-xs uppercase tracking-widest border border-[#c45b3e] text-[#c45b3e] hover:bg-[#c45b3e] hover:text-paper transition-colors disabled:opacity-40"
+          >
+            {isSubmitting ? 'Saving…' : 'Update'}
+          </button>
+          <button
+            onClick={() => { setEditorMode('new'); setTitle(''); setDate(new Date().toISOString().split('T')[0]); setExcerpt(''); setTags(''); setContentMarkdown(''); setSubmitErr(null); setSubmitSuccess(false); }}
+            className="py-2 px-4 font-mono text-xs uppercase tracking-widest border border-[rgba(74,98,116,0.4)] text-[#6b7a8d] hover:text-paper transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+        {submitErr && <p className="text-red-400 font-mono text-xs">{submitErr}</p>}
+        {submitSuccess && <p className="text-[#c45b3e] font-mono text-xs">Post saved!</p>}
+      </div>
+    );
+  }
+
+  function CreatePostForm({ onPostCreated }) {
+    const [title, setTitle] = useState('');
+    const [excerpt, setExcerpt] = useState('');
+    const [tags, setTags] = useState('');
+    const [contentMarkdown, setContentMarkdown] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitErr, setSubmitErr] = useState(null);
+    const [submitSuccess, setSubmitSuccess] = useState(false);
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setIsSubmitting(true);
+      setSubmitErr(null);
+      setSubmitSuccess(false);
+      try {
+        let slug = title
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+        if (!slug) slug = 'untitled';
+
+        // Check for slug collision and append -2, -3, ... if needed
+        let finalSlug = slug;
+        let counter = 1;
+        while (true) {
+          const { data: existing, error: checkErr } = await supabase
+            .from('posts')
+            .select('id')
+            .eq('slug', finalSlug)
+            .limit(1);
+          if (checkErr) {
+            setSubmitErr(`Slug check failed: ${checkErr.message}`);
+            setIsSubmitting(false);
+            return;
+          }
+          if (!existing?.length) break;
+          counter++;
+          finalSlug = `${slug}-${counter}`;
+        }
+
+        const { error } = await supabase.from('posts').insert({
+          title,
+          slug: finalSlug,
+          excerpt,
+          tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+          content_html: DOMPurify.sanitize(marked.parse(contentMarkdown)),
+          date_published: date,
+          content_markdown: contentMarkdown,
+        });
+
+        if (error) {
+          setSubmitErr(error.message);
+        } else {
+          setSubmitSuccess(true);
+          setTitle('');
+          setExcerpt('');
+          setTags('');
+          setContentMarkdown('');
+          onPostCreated();
+        }
+      } catch (e) {
+        setSubmitErr(e.message || 'Network error');
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    return (
+      <div className="border border-[rgba(74,98,116,0.3)] bg-[#e4dfd3]/90 p-6 pixel-corners space-y-4">
+        <div>
+          <label className="fig-label block mb-1">Title</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-display text-base uppercase tracking-tight pb-1 focus:outline-none focus:border-[#c45b3e]"
+            placeholder="Post title…"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="fig-label block mb-1">Date Published</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-sm pb-1 focus:outline-none focus:border-[#c45b3e]"
+            />
+          </div>
+          <div>
+            <label className="fig-label block mb-1">Tags (comma-separated)</label>
+            <input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-sm pb-1 focus:outline-none focus:border-[#c45b3e]"
+              placeholder="game-dev, unity"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="fig-label block mb-1">Excerpt</label>
+          <input
+            value={excerpt}
+            onChange={(e) => setExcerpt(e.target.value)}
+            className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-sm pb-1 focus:outline-none focus:border-[#c45b3e]"
+            placeholder="One-line preview…"
+          />
+        </div>
+        <div>
+          <label className="fig-label block mb-1">Content (Markdown)</label>
+          <textarea
+            value={contentMarkdown}
+            onChange={(e) => setContentMarkdown(e.target.value)}
+            rows={16}
+            className="w-full bg-transparent border border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-xs p-3 focus:outline-none focus:border-[#c45b3e] resize-y"
+            placeholder="# Heading&#10;&#10;Paragraph with **bold** and `code`."
+          />
+        </div>
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="py-2 px-6 font-mono text-xs uppercase tracking-widest border border-[#c45b3e] text-[#c45b3e] hover:bg-[#c45b3e] hover:text-paper transition-colors disabled:opacity-40"
+          >
+            {isSubmitting ? 'Saving…' : 'Publish'}
+          </button>
+          <button
+            onClick={() => { setTitle(''); setExcerpt(''); setTags(''); setContentMarkdown(''); setSubmitErr(null); setSubmitSuccess(false); }}
+            className="py-2 px-4 font-mono text-xs uppercase tracking-widest border border-[rgba(74,98,116,0.4)] text-[#6b7a8d] hover:text-paper transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+        {submitErr && <p className="text-red-400 font-mono text-xs">{submitErr}</p>}
+        {submitSuccess && <p className="text-[#c45b3e] font-mono text-xs">Post created!</p>}
+      </div>
+    );
+  }
 
   // ── Login screen ─────────────────────────────────────────────
-  if (!unlocked) {
+  if (!session) {
     return (
       <section className="min-h-screen flex items-center justify-center px-6">
         <div className="w-full max-w-sm">
           <SchematicLabel fig="08" title="ADMIN" />
           <p className="text-divider">===================</p>
           <div className="border border-[rgba(74,98,116,0.3)] bg-[#e4dfd3]/90 p-6 pixel-corners">
-            <label className="fig-label block mb-2">Password</label>
+            <label className="fig-label block mb-2">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-sm pb-1 focus:outline-none focus:border-[#c45b3e]"
+              placeholder="your@email.com"
+            />
+            <label className="fig-label block mb-2 mt-4">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
               className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-sm pb-1 focus:outline-none focus:border-[#c45b3e]"
-              placeholder="Enter admin password…"
+              placeholder="Enter password…"
             />
             {message.text && (
               <p className={`mt-3 text-xs ${message.type === 'error' ? 'text-red-500' : 'text-[#c45b3e]'}`}>{message.text}</p>
@@ -146,7 +466,7 @@ export default function Admin() {
               onClick={handleLogin}
               className="mt-4 w-full py-2 text-xs uppercase tracking-widest font-mono border border-[#c45b3e] text-[#c45b3e] hover:bg-[#c45b3e] hover:text-paper transition-colors"
             >
-              Unlock
+              Sign In
             </button>
           </div>
           <div className="pixel-br-tr" />
@@ -167,19 +487,21 @@ export default function Admin() {
         <div className="flex gap-4 mb-6">
           <button
             onClick={handleNew}
-            className={`font-mono text-xs uppercase tracking-widest py-1 px-3 transition-colors ${
-              editorMode === 'new' ? 'text-[#c45b3e] border-b-2 border-[#c45b3e]' : 'text-[#4a6274]'
-            }`}
+            className={`font-mono text-xs uppercase tracking-widest py-1 px-3 transition-colors ${editorMode === 'new' ? 'text-[#c45b3e] border-b-2 border-[#c45b3e]' : 'text-[#4a6274]'}`}
           >
             + New Post
           </button>
           <button
             onClick={() => { setEditorMode('edit'); setMessage({ type: '', text: '' }); }}
-            className={`font-mono text-xs uppercase tracking-widest py-1 px-3 transition-colors ${
-              editorMode === 'edit' ? 'text-[#c45b3e] border-b-2 border-[#c45b3e]' : 'text-[#4a6274]'
-            }`}
+            className={`font-mono text-xs uppercase tracking-widest py-1 px-3 transition-colors ${editorMode === 'edit' ? 'text-[#c45b3e] border-b-2 border-[#c45b3e]' : 'text-[#4a6274]'}`}
           >
             Edit Posts
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="ml-auto font-mono text-xs uppercase tracking-widest py-1 px-3 text-[#6b7a8d] hover:text-[#c45b3e]"
+          >
+            Sign Out
           </button>
         </div>
 
@@ -191,71 +513,13 @@ export default function Admin() {
         )}
 
         {/* ── New / Edit form ── */}
-        {(editorMode === 'new' || editorMode === 'edit') && (
+        {(editorMode === 'new' || (editorMode === 'edit' && selectedPost)) && (
           <div className="border border-[rgba(74,98,116,0.3)] bg-[#e4dfd3]/90 p-6 pixel-corners space-y-4">
-            <div>
-              <label className="fig-label block mb-1">Title</label>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-display text-base uppercase tracking-tight pb-1 focus:outline-none focus:border-[#c45b3e]"
-                placeholder="Post title…"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="fig-label block mb-1">Date Published</label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-sm pb-1 focus:outline-none focus:border-[#c45b3e]"
-                />
-              </div>
-              <div>
-                <label className="fig-label block mb-1">Tags (comma-separated)</label>
-                <input
-                  value={tagsInput}
-                  onChange={(e) => setTagsInput(e.target.value)}
-                  className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-sm pb-1 focus:outline-none focus:border-[#c45b3e]"
-                  placeholder="game-dev, unity"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="fig-label block mb-1">Excerpt</label>
-              <input
-                value={excerpt}
-                onChange={(e) => setExcerpt(e.target.value)}
-                className="w-full bg-transparent border-b border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-sm pb-1 focus:outline-none focus:border-[#c45b3e]"
-                placeholder="One-line preview…"
-              />
-            </div>
-            <div>
-              <label className="fig-label block mb-1">Content (Markdown)</label>
-              <textarea
-                value={contentMarkdown}
-                onChange={(e) => setContentMarkdown(e.target.value)}
-                rows={16}
-                className="w-full bg-transparent border border-[rgba(74,98,116,0.4)] text-[#1a1c23] font-mono text-xs p-3 focus:outline-none focus:border-[#c45b3e] resize-y"
-                placeholder="# Heading&#10;&#10;Paragraph with **bold** and `code`."
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={handleSubmit}
-                disabled={saving}
-                className="py-2 px-6 font-mono text-xs uppercase tracking-widest border border-[#c45b3e] text-[#c45b3e] hover:bg-[#c45b3e] hover:text-paper transition-colors disabled:opacity-40"
-              >
-                {saving ? 'Saving…' : editorMode === 'new' ? 'Publish' : 'Update'}
-              </button>
-              <button
-                onClick={() => { setEditorMode('new'); setTitle(''); setDate(''); setExcerpt(''); setTagsInput(''); setContentMarkdown(''); setMessage({ type: '', text: '' }); }}
-                className="py-2 px-4 font-mono text-xs uppercase tracking-widest border border-[rgba(74,98,116,0.4)] text-[#6b7a8d] hover:text-paper transition-colors"
-              >
-                Clear
-              </button>
-            </div>
+            {editorMode === 'new' ? (
+              <CreatePostForm onPostCreated={fetchPosts} />
+            ) : (
+              <EditPostForm post={selectedPost} onPostUpdated={fetchPosts} />
+            )}
           </div>
         )}
 

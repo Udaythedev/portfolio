@@ -1,143 +1,76 @@
 # Uday Kumar Mahato — Portfolio
 
-A single-page personal portfolio built with React + Vite + Tailwind CSS v4 and Framer Motion.
+A single-page portfolio with a blueprint/engineering-schematic aesthetic, built with **React 19 + Vite 8 + Tailwind CSS v4 + Framer Motion**, deployed to [udays.space](https://udays.space) via Vercel.
 
-**Live site:** https://udays.space
+## Features
 
----
+- **Blueprint aesthetic**: ink background, paper cards, terracotta accent, FIG labels, dimension dividers
+- **Gamification**: CRT scanlines, pixel-art corners, RPG skill bars, achievement toast, Konami code Easter egg
+- **Blog**: Supabase-powered blog with admin panel (email/password auth, Markdown editor, RLS policies)
+- **Animations**: Framer Motion scroll reveals, hero SVG draw-in, project hover flash
+- **Responsive**: mobile-first, dark/light theme, prefers-reduced-motion support
 
-## Stack
+## Setup
 
-| Layer | Tooling |
-|---|---|
-| Framework | React 19 · Vite 8 |
-| Styling | Tailwind CSS v4 (native config via `@theme` in CSS) |
-| Animation | Framer Motion (scroll reveals + hero SVG draw-in) |
-| Fonts | Big Shoulders Display, IBM Plex Sans, IBM Plex Mono (Google Fonts) |
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/Udaythedev/portfolio.git
+   cd portfolio
+   ```
 
----
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-## Design Aesthetic
+3. Set up Supabase:
+   - Create a new project at [supabase.com](https://supabase.com)
+   - Run the SQL schema (see below)
+   - Enable email/password auth: Supabase Dashboard → Authentication → Providers → Email/Password
+   - Add your email as an admin user: Authentication → Users → Add user
 
-Blueprint / engineering schematic — deliberately avoids common AI-portfolio clichés (warm cream + serif, neon-on-black, newspaper layout).
+4. Create `.env.local`:
+   ```env
+   VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
+   ```
 
-Key visual elements:
+5. Run locally:
+   ```bash
+   npm run dev
+   ```
 
-- Single deep-ink background (`#0a0c10`) throughout, no alternating sections
-- Faint blueprint grid via CSS `::before` on body
-- Corner registration marks at viewport edges
-- Paper-colored spec-sheet cards with structural-line borders
-- Section labels in mono: `FIG. 02 — PROJECTS`
-- Dimension-line dividers (`=====`) between sections
-- Single unified terracotta accent (`#c45b3e`) across the entire site
-- All interactive links use `◆` Unicode glyphs
-
----
-
-## Gamification Features
-
-Light interactive touches that give the site subtle game-dev energy without being distracting:
-
-- **RPG skill bars** — proficiency fill bars on each skill tag, styled like game stat meters
-- **Pixel-art corner brackets** — blocky L-brackets on all paper cards; turn terracotta on hover
-- **Project card hover flash** — left-to-right terracotta gradient sweep on hover
-- **Achievement toast** — "🏆 Achievement Unlocked" notification fires once when you scroll to the Achievements section
-- **Konami code easter egg** — type `↑↑↓↓←→←→BA` for a "Developer Mode Activated" center-screen toast (3s auto-dismiss)
-- **CRT scanline overlay** — faint horizontal line pattern across the full viewport (subtle, never blocks interaction)
-
----
-
-## Sections
-
-| Fig | Section | Content |
-|---|---|---|
-| Hero | Signature name + domain callouts | Animated SVG leader lines on load |
-| FIG. 01 | About | First-person bio + education/focus/leadership/languages quick facts |
-| FIG. 02 | Skills | 6 grouped clusters with RPG stat bars |
-| FIG. 03.1–03.3 | Projects | Software & AI, Game Dev, College & Hackathon clusters |
-| FIG. 04 | Achievements | Vertical timeline with medal emojis |
-| FIG. 05 | Beyond the Code | Content pipeline, Gumroad preset, 3D modeling |
-| FIG. 06 | Contact | Email, handles, closing note |
-| FIG. 07 | Blog (Writes) | Markdown-powered blog, powered by Supabase |
-
----
-
-## Blog Setup (Supabase)
-
-The blog uses [Supabase](https://supabase.com) as a free database backend. Here's how to set it up:
-
-### 1. Create a Supabase project
-Go to https://supabase.com → Sign up (free) → Create a new project.
-
-### 2. Run the SQL to create the `posts` table
-Copy and paste this into the Supabase **SQL Editor**:
+## Supabase Schema
 
 ```sql
+-- Posts table
 create table posts (
-  id bigint primary key generated always as identity,
-  slug text unique not null,
+  id uuid primary key default gen_random_uuid(),
   title text not null,
-  date_published text,
+  slug text not null unique,
   excerpt text,
   tags text[],
+  content_html text not null,
   content_markdown text not null,
-  content_html text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+  date_published date,
+  created_at timestamp with time zone default now()
 );
 
-alter table posts enable row level security;
-
-create policy "Public posts are viewable by everyone"
-  on posts for select using (true);
-
-create policy "Admin can insert posts"
-  on posts for insert with check (true);
-
-create policy "Admin can update posts"
-  on posts for update using (true);
-
-create policy "Admin can delete posts"
-  on posts for delete using (true);
+-- RLS policies (run AFTER enabling email/password auth)
+create policy "public read" on posts for select using (true);
+create policy "auth write" on posts for insert to authenticated with check (true);
+create policy "auth update" on posts for update to authenticated using (true);
+create policy "auth delete" on posts for delete to authenticated using (true);
 ```
 
-### 3. Set environment variables
-Create a `.env` file in the project root:
-```bash
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
-VITE_ADMIN_PASSWORD=your-secure-password
-```
-> ⚠️ Commit only `.env.example`, never the actual `.env`.
+## Deploy to Vercel
 
-### 4. Write your first blog post
-Visit `https://your-domain.com/admin` → enter password → write and publish!
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FUdaythedev%2Fportfolio)
 
----
+- Set the same env vars as `.env.local`
+- Remove `VITE_ADMIN_PASSWORD` (not used anymore)
+- Add rewrite rules for SPA routing (see `vercel.json`)
 
-## Local Development
+## License
 
-```bash
-npm install
-npm run dev
-```
-
-Open http://localhost:5173
-
----
-
-## Build
-
-```bash
-npm run build
-```
-
-Output goes to `dist/` — ready for Vercel, Netlify, or GitHub Pages deployment.
-
----
-
-## Accessibility
-
-- `prefers-reduced-motion` respected — all animations disabled
-- Full keyboard navigation with terracotta focus outlines
-- Semantic HTML throughout (`<section>`, `<nav>`, `<main>`)
+MIT

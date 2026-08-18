@@ -3,7 +3,7 @@
 
 export const projects = {
   softwareAI: {
-    id: '02-1',
+    id: '03-1',
     title: 'Software & AI',
     items: [
       {
@@ -54,7 +54,7 @@ export const projects = {
     ],
   },
   gameDev: {
-    id: '02-2',
+    id: '03-2',
     title: 'Game Development',
     subtitle: '@gamesofuday',
     items: [
@@ -85,7 +85,7 @@ export const projects = {
     ],
   },
   collegeHackathon: {
-    id: '02-3',
+    id: '03-3',
     title: 'College & Hackathon Builds',
     items: [
       {

@@ -52,7 +52,7 @@ const Nav = () => {
           {/* Logo */}
           <NavLink
             to="/"
-            className="font-display font-bold text-sm hover:text-[#c45b3e] transition-colors focus:none"
+            className="font-display font-bold text-sm hover:text-[#c45b3e] transition-colors"
             style={{ color: '#e4dfd3', letterSpacing: '0.1em', textDecoration: 'none' }}
           >
             UDAY MAHATO
@@ -64,7 +64,7 @@ const Nav = () => {
               <button
                 key={sec.id}
                 onClick={() => navigateToSection(sec.id)}
-                className="font-mono text-xs uppercase tracking-widest transition-colors focus:none"
+                className="font-mono text-xs uppercase tracking-widest transition-colors"
                 style={{
                   color: '#6b7a8d',
                   textDecoration: 'none',
@@ -78,7 +78,7 @@ const Nav = () => {
             <NavLink
               to="/blog"
               className={({ isActive }) =>
-                `font-mono text-xs uppercase tracking-widest transition-colors focus:none ${isActive ? 'text-[#c45b3e]' : 'text-[#6b7a8d]'}`
+                `font-mono text-xs uppercase tracking-widest transition-colors ${isActive ? 'text-[#c45b3e]' : 'text-[#6b7a8d]'}`
               }
               style={{
                 textDecoration: 'none',
@@ -92,7 +92,7 @@ const Nav = () => {
 
           {/* Mobile hamburger */}
           <button
-            className="sm:hidden flex flex-col gap-1.5 p-1 focus:none"
+            className="sm:hidden flex flex-col gap-1.5 p-1"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
             style={{ background: 'none', border: 'none', cursor: 'pointer' }}
@@ -122,7 +122,7 @@ const Nav = () => {
                 <button
                   key={sec.id}
                   onClick={() => navigateToSection(sec.id)}
-                  className="font-mono text-xs uppercase tracking-widest text-left py-1 focus:none"
+                  className="font-mono text-xs uppercase tracking-widest text-left py-1"
                   style={{ color: '#6b7a8d', borderBottom: '1px solid rgba(74,98,116,0.15)', paddingBottom: 3 }}
                 >
                   {sec.label}
@@ -132,7 +132,7 @@ const Nav = () => {
                 to="/blog"
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
-                  `font-mono text-xs uppercase tracking-widest text-left py-1 focus:none ${isActive ? 'text-[#c45b3e]' : 'text-[#6b7a8d]'}`
+                  `font-mono text-xs uppercase tracking-widest text-left py-1 ${isActive ? 'text-[#c45b3e]' : 'text-[#6b7a8d]'}`
                 }
                 style={{ borderBottom: '1px solid rgba(74,98,116,0.15)', paddingBottom: 3, textDecoration: 'none' }}
               >

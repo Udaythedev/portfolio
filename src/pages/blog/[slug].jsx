@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { SchematicLabel } from '../../lib/SchematicLabel';
+import DOMPurify from 'dompurify';
 
 export default function BlogPost() {
   const { slug } = useParams();
@@ -11,18 +12,28 @@ export default function BlogPost() {
 
   useEffect(() => {
     async function fetchPost() {
-      const { data, error: err } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-      if (err) {
-        console.error('[BlogPost] fetch error:', err);
-        setError(err.message);
-      } else {
-        setPost(data);
+      try {
+        const { data, error: err } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('slug', slug)
+          .limit(1)
+          .single();
+
+        if (err) {
+          if (err.code === 'PGRST116') {
+            setError('Post not found');
+          } else {
+            setError(`Failed to load post: ${err.message}`);
+          }
+        } else {
+          setPost(data);
+        }
+      } catch (e) {
+        setError(`Network error: ${e.message}`);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     fetchPost();
   }, [slug]);
@@ -38,7 +49,8 @@ export default function BlogPost() {
   if (error || !post) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-paper font-display text-xl uppercase">Post not found</p>
+        <SchematicLabel fig="08" title="ERROR" />
+        <p className="text-paper font-display text-xl uppercase">{error || 'Post not found'}</p>
         <Link to="/blog" className="mini-link">← Back to writes</Link>
       </div>
     );
@@ -55,7 +67,7 @@ export default function BlogPost() {
         </Link>
 
         <div className="mb-8">
-          <SchematicLabel fig="07" title="WRITE" />
+          <SchematicLabel fig="08" title="WRITE" />
           <h1 className="font-display text-2xl sm:text-3xl font-bold text-paper uppercase tracking-tight mt-3 leading-tight">
             {post.title}
           </h1>
@@ -70,7 +82,7 @@ export default function BlogPost() {
         {/* Render markdown HTML safely */}
         <div
           className="prose-custom"
-          dangerouslySetInnerHTML={{ __html: post.content_html }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content_html) }}
         />
       </div>
     </article>

@@ -29,7 +29,7 @@ const AchievementToast = () => {
       <div className={`ach-toast ${show ? 'show' : ''}`}>
         <span className="toast-medal">🏆</span>
         <span>Achievement Unlocked — Scroll to see them</span>
-        <button onClick={handleDismiss} className="ml-2 hover:text-[#c45b3e] focus:none" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7a8d', fontFamily: 'monospace', fontSize: '0.6rem' }}>✕</button>
+        <button onClick={handleDismiss} className="ml-2 hover:text-[#c45b3e]" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7a8d', fontFamily: 'monospace', fontSize: '0.6rem' }}>✕</button>
       </div>
     </>
   );

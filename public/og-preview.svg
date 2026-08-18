@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0a0c10"/>
+  <!-- Grid -->
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a1c23" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <!-- Crosshair -->
+  <line x1="600" y1="0" x2="600" y2="630" stroke="#c45b3e" stroke-width="2"/>
+  <line x1="0" y1="315" x2="1200" y2="315" stroke="#c45b3e" stroke-width="2"/>
+  <!-- Title -->
+  <text x="600" y="275" font-family="Big Shoulders Display" font-size="64" font-weight="bold" fill="#e4dfd3" text-anchor="middle" letter-spacing="0.05em">UDAY KUMAR MAHATO</text>
+  <text x="600" y="355" font-family="IBM Plex Mono" font-size="24" fill="#9ba4b5" text-anchor="middle">udays.space</text>
+</svg>

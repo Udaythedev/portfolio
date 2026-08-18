@@ -34,10 +34,12 @@ const Home = () => (
 function App() {
   const [devMode, setDevMode] = React.useState(false);
 
-  useKonamiCode(() => {
+  const konamiCallback = useCallback(() => {
     setDevMode(true);
     setTimeout(() => setDevMode(false), 3000);
-  });
+  }, []);
+
+  useKonamiCode(konamiCallback);
 
   return (
     <BrowserRouter>
@@ -51,6 +53,12 @@ function App() {
             <Route path="/blog" element={<BlogList />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="*" element={(
+              <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+                <p className="text-paper font-display text-xl uppercase">404 — Not Found</p>
+                <Link to="/" className="mini-link">← Back to home</Link>
+              </div>
+            )} />
           </Routes>
         </main>
 

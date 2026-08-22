@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React, { useState, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Nav from './layout/Nav';
 import Footer from './layout/Footer';
 import SchematicHero from './components/SchematicHero';
@@ -32,7 +32,7 @@ const Home = () => (
  * App — Root component with client-side routing for blog + admin.
  */
 function App() {
-  const [devMode, setDevMode] = React.useState(false);
+  const [devMode, setDevMode] = useState(false);
 
   const konamiCallback = useCallback(() => {
     setDevMode(true);
@@ -42,7 +42,7 @@ function App() {
   useKonamiCode(konamiCallback);
 
   return (
-    <BrowserRouter>
+    <Router>
       <div className="min-h-screen bg-ink text-muted font-body relative overflow-x-hidden">
         <div className="crt-overlay" />
         <Nav />
@@ -65,7 +65,7 @@ function App() {
         <Footer />
         <DevModeToast show={devMode} />
       </div>
-    </BrowserRouter>
+    </Router>
   );
 }
 
